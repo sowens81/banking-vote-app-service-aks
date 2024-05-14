@@ -1,0 +1,75 @@
+parameters:
+  - name: azureServiceConnection
+    type: string
+  - name: aksServiceConnection
+    type: string
+  - name: acrServiceConnection
+    type: string
+  - name: namespace
+    type: string
+  - name: containerRepoName
+    type: string
+  - name: acrRegistryUri
+    type: string
+  - name: tagVersion
+    type: string
+  - name: artifactName
+    type: string
+  - name: imagePullSecret
+    type: string
+
+stages:
+-   stage: 'CD_Stage_Prod'
+    displayName: 'CD Stage - Deploy to Prod-'
+    dependsOn: CI_Stage
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      manifestName: $[stageDependencies.CI_Stage.Docker_Build_Scan_Publish.outputs['Kubernetes_Manifest_Name.manifestName']]
+    jobs:
+    - deployment:
+      displayName: 'Deploy to Prod'
+      environment: 'Prod'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - task: DownloadBuildArtifacts@0
+              displayName: 'Download Artifact'
+              inputs:
+                buildType: 'current'
+                ArtifactName: ${{ parameters.artifactName}}
+                downloadPath: '$(Pipeline.Workspace)/${{ parameters.artifactName}}'
+
+            - task: PowerShell@2
+              displayName: 'Update Container Version'
+              inputs:
+                targetType: 'inline'
+                script: |
+                  $filePath = "$(Pipeline.Workspace)/${{ parameters.artifactName}}/$(manifestName).yaml"
+                  $container= "${{ parameters.acrRegistryUri }}/${{ parameters.containerRepoName }}:${{ parameters.tagVersion }}"
+                  (Get-Content $filePath) -replace 'IMAGE_NAME', $container | Set-Content $filePath
+                  $yamlContent = Get-Content -Path $filePath -Raw
+                  Write-Output $yamlContent
+
+            - task: KubernetesManifest@0
+              displayName: Create imagePullSecret
+              inputs:
+                action: createSecret
+                secretType: dockerRegistry
+                secretName: ${{ parameters.imagePullSecret }}
+                namespace: ${{ parameters.namespace }}
+                kubernetesServiceConnection: ${{ parameters.aksServiceConnection }}
+                dockerRegistryEndpoint: ${{ parameters.acrServiceConnection }}
+
+            - task: KubernetesManifest@0
+              displayName: Deploy to Kubernetes cluster
+              inputs:
+                action: deploy
+                kubernetesServiceConnection: ${{ parameters.aksServiceConnection }}
+                namespace: ${{ parameters.namespace }}
+                manifests: |
+                  $(Pipeline.Workspace)/${{ parameters.artifactName}}/$(manifestName).yaml
+                imagePullSecrets: |
+                  ${{ parameters.imagePullSecret }}
+                containers: |
+                  $(containerRegistry)/$(imageRepository):$(tag)

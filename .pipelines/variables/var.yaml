@@ -1,0 +1,19 @@
+variables:
+    pythonVersion: '3.12.0'
+    sourceDirectory: $(Build.SourcesDirectory)/src/voteapp/azure-vote/azure-vote
+    dockerFileLocation: $(Build.SourcesDirectory)/src/voteapp/azure-vote
+    containerRepoName: voteapp
+    manifestFileName: azure-vote-all-in-one-redis.yaml
+    manifestFilePath: $(Build.SourcesDirectory)/src/voteapp
+    artifactName: voteapp
+    environment: prod
+    azureServiceConnection: voteap-azure-prod-service-principle-connection
+    acrServiceConnection: voteap-acr-prod-service-principle-connection
+    aksServiceConnection: voteap-aks-prod-service-principle-connection
+    containerRegistry: acrlbavoteappproduksouth01.azurecr.io
+    namespace: prod-voteap
+    iacScriptPath: $(Build.SourcesDirectory)/src/iac/aks-landing-zone.ps1
+    region: uksouth
+    applicationName: voteapp
+    departmentCode: lba
+    imagePullSecretName: acr-pull-identity

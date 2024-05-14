@@ -1,0 +1,43 @@
+# Description: Pipeline for Deploying the Microsoft Voting App to AKS
+
+trigger:
+  branches:
+    include:
+    - main
+    - feature/*
+  paths:
+    include:
+    - 'src/*'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - template: /.pipelines/variables/var.yaml
+
+stages:
+- template: /.pipelines/templates/stages/ci-stage-template.yaml
+  parameters:
+    pythonVersion: $(pythonVersion)
+    sourceDirectory: $(sourceDirectory)
+    dockerFileLocation: $(dockerFileLocation)
+    containerRepoName: $(containerRepoName)
+    acrRegistryUri: $(containerRegistry)
+    acrServiceConnection: $(acrServiceConnection)
+    tagVersion: $(build.buildId)
+    manifestFileName: $(manifestFileName)
+    manifestFilePath: $(manifestFilePath)
+    artifactName: $(artifactName)
+
+- template: /.pipelines/templates/stages/cd-stage-template.yaml
+  parameters:
+    azureServiceConnection: $(azureServiceConnection)
+    aksServiceConnection: $(aksServiceConnection)
+    acrServiceConnection: $(acrServiceConnection)
+    namespace: $(namespace)
+    containerRepoName: $(containerRepoName)
+    acrRegistryUri: $(containerRegistry)
+    tagVersion: $(build.buildId)
+    artifactName: $(artifactName)
+    imagePullSecret: $(imagePullSecretName)
+

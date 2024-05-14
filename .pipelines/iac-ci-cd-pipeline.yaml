@@ -1,0 +1,46 @@
+# Description: Pipeline for Building and Deploying the Microsoft Voting App to AKS
+parameters:
+- name: Action
+  displayName: 'Create or Delete IaC Resources?'
+  type: string
+  default: 'Create'
+  values:
+    - Create
+    - Delete
+
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - 'src/iac/*'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - template: /.pipelines/variables/var.yaml
+
+stages:
+-   stage: 'CD_IaC_Stage_Prod'
+    displayName: 'CD IaC Stage - Deploy to Prod'
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+    jobs:
+    - deployment:
+      displayName: 'Deploy to Prod'
+      environment: 'Prod'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - checkout: self
+
+            - task: AzureCLI@2
+              inputs:
+                azureSubscription: $(azureServiceConnection)
+                scriptType: 'pscore'
+                scriptPath: $(iacScriptPath)
+                arguments: '-Environment $(environment) -Region $(region) -ApplicationName $(applicationName) -DepartmentCode $(departmentCode) -Action ${{ parameters.Action }}'
+                addSpnToEnvironment: true
+
