@@ -19,37 +19,32 @@ function CreateResources {
     $acrName = "acr$DepartmentCode$ApplicationName$Environment$Region" + "01"
 
     Write-Output "Starting resource creation..."
-
-    # Create Resource Group
-    Write-Output "Creating Resource Group..."
-    try {
-        $existingRG = az group show --name $resourceGroupName --query id -o tsv
-        Write-Output "Resource Group '$resourceGroupName' already exists."
-    }
-    catch {
-        Write-Output "Resource Group '$resourceGroupName' not found. Creating..."
-        az group create --name $resourceGroupName --location $Region
+    
+    if ((az group exists --name) -eq $false) {
+        Write-Output "Creating Resource Group: $resourceGroupName"
+        az group create --name $resourceGroupName --location $Regio
+    } else {
+        Write-Output "Resource Group already exists: $resourceGroupName"
     }
 
-    # Create ACR
-    Write-Output "Creating ACR..."
+    
     try {
-        $existingACR = az acr show --name $acrName --resource-group $resourceGroupName --query id -o tsv
-        Write-Output "ACR '$acrName' already exists."
-    }
-    catch {
-        Write-Output "ACR '$acrName' not found. Creating..."
+        $acr = az acr show --name $acrName --resource-group $resourceGroupName--query "name" --output tsv
+        if ($acr) {
+            Write-Output "Acr already exists: $acrName"
+        }
+    } catch {
+        Write-Output "Creating Acr: $acrName"
         az acr create --name $acrName --resource-group $resourceGroupName --sku Basic
     }
 
-    # Create AKS Cluster
-    Write-Output "Creating AKS Cluster..."
     try {
-        $existingAKS = az aks show --name $aksClusterName --resource-group $resourceGroupName --query id -o tsv
-        Write-Output "AKS Cluster '$aksClusterName' already exists."
-    }
-    catch {
-        Write-Output "AKS Cluster '$aksClusterName' not found. Creating..."
+        $aks = az aks show --name $aksName --resource-group $resourceGroupName --query "name" --output tsv
+        if ($aks) {
+            Write-Output "AKS already exists: $aksClusterName"
+        }
+    } catch {
+        Write-Output "Creating AKS: $aksClusterName"
         az aks create --name $aksClusterName --resource-group $resourceGroupName --node-count 1 --node-vm-size Standard_D2as_v5 --enable-addons monitoring --network-plugin kubenet --network-policy calico --generate-ssh-keys
     }
 

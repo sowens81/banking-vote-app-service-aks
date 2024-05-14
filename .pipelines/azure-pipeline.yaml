@@ -7,7 +7,7 @@ trigger:
     - feature/*
   paths:
     include:
-    - 'src/*'
+    - 'src/voteapp/*'
 
 pool:
   vmImage: 'ubuntu-latest'
